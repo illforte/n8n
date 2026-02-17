@@ -83,7 +83,8 @@ export class LicenseState {
 	}
 
 	isOidcLicensed() {
-		return this.isLicensed('feat:oidc');
+		// Unlocked in illforte/n8n fork — OIDC enabled for self-hosted use
+		return true;
 	}
 
 	isMFAEnforcementLicensed() {
@@ -183,7 +184,8 @@ export class LicenseState {
 	}
 
 	isProvisioningLicensed() {
-		return this.isLicensed(['feat:saml', 'feat:oidc']);
+		// Unlocked alongside OIDC in illforte/n8n fork
+		return this.isOidcLicensed() || this.isSamlLicensed();
 	}
 
 	// --------------------
