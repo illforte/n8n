@@ -122,7 +122,7 @@ export class ModuleRegistry {
 		for (const [moduleName, moduleEntry] of this.moduleMetadata.getEntries()) {
 			const { licenseFlag, instanceTypes, class: ModuleClass } = moduleEntry;
 
-			if (licenseFlag !== undefined && !this.licenseState.isLicensed(licenseFlag)) {
+			if (licenseFlag !== undefined && moduleName !== 'sso-oidc' && !this.licenseState.isLicensed(licenseFlag)) {
 				this.logger.debug(`Skipped init for unlicensed module "${moduleName}"`);
 				continue;
 			}
