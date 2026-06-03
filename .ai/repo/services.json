@@ -10,7 +10,7 @@
       "runtime": "n8n-fork-repo",
       "tags": [
         "repo",
-        "lazy-singleton",
+        "multi-session",
         "knowledge"
       ]
     },
@@ -21,7 +21,7 @@
       "runtime": "n8n-fork-repo",
       "tags": [
         "repo",
-        "lazy-singleton",
+        "multi-session",
         "filesystem"
       ]
     }

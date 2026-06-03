@@ -23,7 +23,8 @@
         "REPO_ROOT": "{{repoRoot}}",
         "MCP_SERVER_NAME": "n8n-fork-docs",
         "MCP_PROVIDER_ENTRY_RELATIVE": "docs-server/index.js"
-      }
+      },
+      "multiSession": true
     },
     "filesystem-enhanced": {
       "entry": "{{workspaceRoot}}/.ai/host/run-service-entry.mjs",
@@ -31,7 +32,8 @@
         "ALLOWED_DIRECTORIES": "{{repoRoot}}",
         "MCP_SERVER_NAME": "n8n-fork-filesystem",
         "MCP_PROVIDER_ENTRY_RELATIVE": "filesystem-enhanced/index.js"
-      }
+      },
+      "multiSession": true
     }
   }
 }
