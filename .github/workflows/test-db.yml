@@ -87,10 +87,56 @@ jobs:
     name: Notify Slack on failure
     runs-on: ubuntu-latest
     needs: [sqlite-pooled, postgres]
+    # Ohne dieses if ueberspringt GitHub den Job, sobald eine der needs-Jobs
+    # faellt - der Job "notify ON FAILURE" konnte also nie bei einem Fehlschlag
+    # laufen. Das if am Schritt darunter kam nie zum Zug.
+    if: always()
     steps:
       - name: Notify Slack
         if: always()
+        env:
+          # Als Argument uebergeben landet ein Token in der Prozessliste und
+          # potenziell im Log. Als env bleibt es maskiert.
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ vars.SLACK_CI_CHANNEL || 'C0AG3FPQ7QX' }}
+          SQLITE_RESULT: ${{ needs.sqlite-pooled.result }}
+          POSTGRES_RESULT: ${{ needs.postgres.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          curl -sS -o ci-report.sh "https://raw.githubusercontent.com/illforte/weretradeInfantrie_1.0/main/scripts/ci/ci-report.sh"
-          bash ci-report.sh "${{ job.status }}" "${{ github.workflow }}" "${{ github.run_id }}" "${{ secrets.SLACK_BOT_TOKEN }}"
-          rm -f ci-report.sh
+          set -euo pipefail
+
+          if [ -z "${SLACK_BOT_TOKEN:-}" ]; then
+            echo "::warning::SLACK_BOT_TOKEN ist nicht gesetzt - kein CI-Bericht verschickt."
+            exit 0
+          fi
+
+          # Der Gesamtstand kommt aus den needs-Ergebnissen. Frueher stand hier
+          # ${{ job.status }} - das ist der Status DIESES Jobs und damit an
+          # dieser Stelle immer "success", egal wie die Tests ausgingen.
+          if [ "$SQLITE_RESULT" = "success" ] && [ "$POSTGRES_RESULT" = "success" ]; then
+            icon=":white_check_mark:"; head="CI gruen"
+          else
+            icon=":x:"; head="CI rot"
+          fi
+
+          text="$(printf '%s *%s* - %s\n>sqlite-pooled: %s | postgres: %s\n><%s|Lauf %s> - %s@%s' \
+            "$icon" "$head" "${GITHUB_WORKFLOW}" \
+            "$SQLITE_RESULT" "$POSTGRES_RESULT" \
+            "$RUN_URL" "${GITHUB_RUN_ID}" "${GITHUB_REPOSITORY}" "${GITHUB_REF_NAME}")"
+
+          payload="$(jq -nc --arg c "$SLACK_CHANNEL" --arg t "$text" \
+            '{channel:$c, text:$t, unfurl_links:false}')"
+
+          # -f fehlt hier bewusst nicht: ohne wuerde curl auch eine
+          # Fehlerantwort mit Exit 0 quittieren - genau daran ist die
+          # Vorgaengerfassung still gescheitert.
+          response="$(curl -sS -f -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            --data "$payload")"
+
+          if [ "$(printf '%s' "$response" | jq -r '.ok')" != "true" ]; then
+            echo "::error::Slack lehnte den Bericht ab: $(printf '%s' "$response" | jq -r '.error // "unbekannt"')"
+            exit 1
+          fi
+          echo "CI-Bericht an $SLACK_CHANNEL geschickt."
